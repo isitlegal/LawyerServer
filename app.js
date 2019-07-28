@@ -25,6 +25,8 @@ app.post('/signup', (req, res) => {
     const password = req.body.password;
     const authCode = req.body.auth_code;
 
+    console.log(name + authCode);
+
     const sql = 'select * from lawyer where email = ?';
     conn.query(sql, [email], (err, rows) => {
         if (err) {
@@ -55,6 +57,8 @@ app.post('/signup', (req, res) => {
 app.post('/login', (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
+
+    console.log(email);
 
     const encryptedPassword = crypto.createHash('sha512').update(password).digest('base64');
 
@@ -89,6 +93,11 @@ app.post('/autologin', (req, res) => {
     const token = req.headers.authorization;
     console.log(token);
 
+    if (token === '') {
+        res.sendStatus(404);
+        return;
+    }
+
     const sql = 'select * from lawyer where token = ?';
     conn.query(sql, [token], (err, rows) => {
         if (err) {
@@ -110,5 +119,62 @@ app.post('/autologin', (req, res) => {
 
             res.json({token: newToken});
         });
+    });
+});
+
+app.get('/lawyerlist', (req, res) => {
+    const sql = 'select name, email from lawyer';
+    conn.query(sql,(err, rows) => {
+        if (err) {
+            res.sendStatus(500);
+            return;
+        }
+
+        res.json(rows);
+    });
+});
+
+app.post('/addchat', (req, res) => {
+    const userEmail = req.body.user_email;
+    const lawyerEmail = req.body.lawyer_email;
+
+    console.log('user_email:' + userEmail);
+    console.log('lawyer_email:' + lawyerEmail);
+
+    const sql = 'select * from chat where user_email = ? and lawyer_email = ?';
+    conn.query(sql, [userEmail, lawyerEmail], (err, rows) => {
+        if (err) {
+            res.sendStatus(500);
+            return;
+        }
+
+        if (rows.length > 0) {
+            res.sendStatus(409);
+            return;
+        }
+
+        const sql = 'insert into chat values(?, ?)';
+        conn.query(sql, [userEmail, lawyerEmail], (err) => {
+            if (err) {
+                res.sendStatus(500);
+                return;
+            }
+
+            res.sendStatus(200);
+        });
+    });
+});
+
+app.get('/chatlist', (req, res) => {
+    const lawyerEmail = req.query.lawyer_email;
+
+    const sql = 'select user_email from chat where lawyer_email = ?';
+    conn.query(sql, [lawyerEmail], (err, rows) => {
+        if (err) {
+            res.sendStatus(500);
+            return;
+        }
+        console.log(rows);
+        res.json(rows);
     });
 });
